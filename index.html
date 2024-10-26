@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- <link href="./assets/bootstrap.min.css" rel="stylesheet"> -->
+
+    <!-- jquery -->
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+    <!-- <script src="./assets/jquery.min.js"></script> -->
+
+    <title>Api Tester!</title>
+</head>
+
+<body>
+
+    <form class="m-2">
+        <div class="input-group py-2">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="type">Post</button>
+            <ul class="dropdown-menu">
+                <li class="dropdown-item typeBtn" value="Post" target="type">Post</li>
+                <li class="dropdown-item typeBtn" value="Get" target="type">Get</li>
+                <li class="dropdown-item typeBtn" value="Patch" target="type">Patch</li>
+                <li class="dropdown-item typeBtn" value="Delete" target="type">Delete</li>
+            </ul>
+            <input type="url" id="url" class="form-control">
+            
+            <button class="btn btn-primary" type="submit">Send</button>
+        </div>
+
+        <div class="input-group py-2">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="auth">None</button>
+            <ul class="dropdown-menu">
+                <li class="dropdown-item authBtn" value="None" target="auth">None</li>
+                <li class="dropdown-item authBtn" value="Admin" target="auth">Admin</li>
+                <li class="dropdown-item authBtn" value="User" target="auth">User</li>
+            </ul>
+            <input type="text" id="key" class="form-control" readonly>
+        </div>
+        <textarea id="data" class=" form-control" rows=5></textarea>
+    </form>
+
+    <div class="card m-2">
+        <div class="card-header">
+            <div class="d-inline float-start">Response:</div>
+            <div class="d-inline float-end px-2" id="resSize"></div>
+            <div class="d-inline float-end px-2" id="resTime"></div>
+            <div class="d-inline float-end px-2" id="resCode"></div>
+        </div>
+        <div id="results" class="d-block overflow-auto m-2 p-2" style="max-height: 300px;"><center>Click Send to get a response</center></div>
+    </div>
+
+
+
+
+    <script>
+        $(window).on("load", function () {
+            $('#type').html(localStorage.getItem('type')==null ? "Get" : localStorage.getItem('type'));
+            $('#url').val(localStorage.getItem('url')==null ? "" : localStorage.getItem('url'));
+            $('#auth').html(localStorage.getItem('auth')==null ? "None" : localStorage.getItem('auth'));
+            $('#data').html(localStorage.getItem('data')==null? "" : localStorage.getItem('data'));
+            $('#key').val(localStorage.getItem(localStorage.getItem('auth')));
+            if(localStorage.getItem('auth').toUpperCase() == "NONE"){
+                $('#key').prop('readonly',true);
+            } else {
+                $('#key').prop('readonly',false);
+            }
+        });
+        
+        $("li").click(function (){       
+            var value = $(this).attr("value");
+            var target = $(this).attr("target");
+            $('#'+target).html(value);
+
+            if(target.toUpperCase() == 'AUTH'){
+                if(value.toUpperCase() == "NONE"){
+                    $("#key").val('');
+                    $('#key').prop('readonly',true);
+                } else {
+                    $("#key").val(localStorage.getItem(value));
+                    $('#key').prop('readonly',false);
+                }
+            }
+        });
+        
+        $("form").submit(function (event) {
+            $('#resCode').empty();
+            $('#resTime').empty();
+            $('#resSize').empty();
+
+            event.preventDefault();
+            var ajaxTime= new Date().getTime();
+
+            var form = $(this);
+            var type = $("#type").text();
+            var url = $("input#url").val();
+            var auth = $("#auth").text();
+            var key = $("input#key").val();
+            try {
+                var data = $("textarea#data").val();
+                var data = data.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
+	        var data = JSON.parse(data);
+            } catch (e) {
+                var data = $("textarea#data").val();
+            }
+            
+            localStorage.setItem("type", type); 
+            localStorage.setItem("url", url); 
+            localStorage.setItem("auth", auth); 
+            localStorage.setItem(auth, key); 
+            localStorage.setItem("data", JSON.stringify(data, undefined, 3));
+
+            $.ajax({
+                dataType: "json",
+                contentType: "application/x-www-form-urlencoded",
+                type: type,
+                url: url,
+                data: data,
+                headers: {
+                    "Authorization": key
+                },
+                beforeSend: function() {
+                    $('#results').empty().append("<center><div class='spinner-border spinner-border-sm ml-auto' role='status' aria-hidden='true'></div><strong> Loading...</strong></center>");
+                },
+                success: function (data) {
+                    // console.log($.type(data),data);
+                    $('#results').empty().append("<pre>"+JSON.stringify(data, undefined, 3)+"</pre>");
+                    $('#resSize').empty().append(JSON.stringify(data).length + " B");
+                },
+                error: function (error) {
+                    if(error.responseJSON = "undefined"){
+                        $('#results').empty().append(error.statusText);
+                        $('#results').empty().append(error.responseText);
+                        try {
+                            $('#results').empty().append("<pre>"+JSON.stringify(JSON.parse(error.responseText), undefined, 4)+"</pre>");
+                        } catch (e) {
+                            $('#results').empty().append(error.responseText);
+                        }
+                    } else {
+                        $('#results').empty().append("<pre>"+JSON.stringify(error.responseJSON, undefined, 3)+"</pre>");
+                    }
+
+                    $('#resSize').empty().append(JSON.stringify(error).length + " B");
+                },
+                complete: function (xhr) {
+                    var totalTime = new Date().getTime()-ajaxTime;
+                    $('#resCode').empty().append(xhr.status + ": " + xhr.statusText);
+                    $('#resTime').empty().append(totalTime + " ms");
+                }
+
+            });
+        });
+    </script>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- <script src="./assets/bootstrap.bundle.min.js"></script> -->
+</body>
+
+</html>

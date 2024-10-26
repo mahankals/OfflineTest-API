@@ -1,0 +1,16 @@
+{
+  "name": "offline-api-testing-tool",
+  "homepage": "https://mahankals.github.io/OfflineTest-API",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "gh-pages -d ."
+  },
+  "keywords": [],
+  "author": "Atul Mahankal",
+  "license": "ISC",
+  "dependencies": {
+    "gh-pages": "^6.2.0"
+  }
+}
